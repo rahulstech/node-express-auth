@@ -5,29 +5,15 @@ const { AppError } = require('../utils/errors')
 const basePath = path.resolve(__dirname)
 const USERS_JSON = path.join(basePath, 'users.json')
 
-function __readFileAsync(filepath) {
-    return new Promise(( resolve, reject ) => {
-        readFile(filepath, { encoding: 'utf-8', flag:  constants.O_CREAT | constants.O_RDONLY })
-        .then( content => {
-            if (content) {
-                resolve(JSON.parse(content))
-            }
-            else {
-                resolve({})
-            }
-        })
-        .catch( err => reject(err))
-    })
+async function __readFileAsync(filepath) {
+    const content = await readFile(filepath, { encoding: 'utf-8', flag:  constants.O_CREAT | constants.O_RDONLY })
+    return content ? JSON.parse(content) : {}
 }
 
 function __writeFileAsync(filepath, content) {
-    return new Promise(( resolve, reject ) => {
-        const data = JSON.stringify(content,null,2)
+    const data = JSON.stringify(content,null,2)
 
-        writeFile(filepath, data, { encoding: 'utf-8', flag:  constants.O_CREAT | constants.O_WRONLY })
-        .then( () => resolve())
-        .catch( err => reject(err))
-    })
+    return writeFile(filepath, data, { encoding: 'utf-8', flag:  constants.O_CREAT | constants.O_WRONLY })
 }
 
 async function closeDatabase() {
@@ -59,10 +45,6 @@ function findUserByUsername( username ) {
     }
     
     return null
-}
-
-function checkPassword(user, password) {
-    return user.password === password
 }
 
 async function updateUserCredentials(user, { newUsername, newPassword }) {
@@ -103,5 +85,5 @@ async function addNewUser({ username, password}) {
 
 module.exports = { 
     connectDatabase, closeDatabase,
-    findUserByUsername, checkPassword, updateUserCredentials, addNewUser
+    findUserByUsername, updateUserCredentials, addNewUser
 }

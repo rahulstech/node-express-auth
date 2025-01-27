@@ -1,5 +1,40 @@
-const { findUserByUsername, checkPassword } = require('../database/db')
-const { AppError, catchErrorAsync } = require('../utils/errors')
+const { findUserByUsername } = require('../database/db')
+const { AppError } = require('../utils/errors')
+
+/** 
+ * @param { Session } session
+ * @param { { username: string } } user  
+ */
+function addSessionTokenForUser( session, user ) {
+    if (session && user) {
+        session.token = user.username
+    }
+}
+
+/**
+ * 
+ * @param { Session } session 
+ * @returns { string | null } 
+ */
+function getSessionToken( session ) {
+    if (session && session.token) {
+        return session.token
+    }
+    return null
+}
+
+/**
+ * 
+ * @param { { password: string }} user 
+ * @param { string } testPassword 
+ * @returns { boolean }
+ */ 
+async function checkPassword( user, testPassword ) {
+    if (user) {
+        return user.password === testPassword
+    }
+    return false
+}
 
 const authenticateUserCredentials = async ({ username, password }) => {
 
@@ -12,7 +47,7 @@ const authenticateUserCredentials = async ({ username, password }) => {
     }
 
     // if found next check password, if does not match then throw
-    if (!checkPassword(user, password)) {
+    if (!await checkPassword(user, password)) {
         throw new AppError(401, 'incorrect password')
     }
 
@@ -20,9 +55,9 @@ const authenticateUserCredentials = async ({ username, password }) => {
     return user
 }
 
-const validateUser = catchErrorAsync(async (req, res, next) => {
+const validateUser = async (req, res, next) => {
     // get the token from session
-    const { token } = req.session
+    const token = getSessionToken(req.session)
 
     // if token does not exists, means user not logged in
     if (!token) {
@@ -36,8 +71,8 @@ const validateUser = catchErrorAsync(async (req, res, next) => {
     // now i can proceed 
     req.user = user
     next()
-})
+}
 
 module.exports = { 
-    authenticateUserCredentials, validateUser
+    authenticateUserCredentials, validateUser, addSessionTokenForUser, getSessionToken, checkPassword
 }
