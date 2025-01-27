@@ -1,53 +1,15 @@
 const express = require('express')
 const { Router } = express
-const { findUserByUsername, checkPassword } = require('../database/db')
+const { findUserByUsername, checkPassword, updateUserCredentials, addNewUser } = require('../database/db')
+const { AppError, catchErrorAsync } = require('../utils/errors')
+const { authenticateUserCredentials, validateUser } = require('../services/AuthService')
 
 const route = Router()
-
-function authenticateUserCredentials({ username, password }) {
-
-    // find user by username
-    const user = findUserByUsername(username)
-
-    // if not found then throw no user for username
-    if (!user) {
-        throw new Error('username not found')
-    }
-
-    // if found next check password, if does not match then throw
-    if (!checkPassword(user, password)) {
-        throw new Error('incorrect password')
-    }
-
-    // all credentials matched, return the user
-    return user
-}
-
-function validateUser(req, res, next) {
-    // get the token from session
-    const { token } = req.session
-
-    // if token does not exists, means user not logged in
-    if (!token) {
-        return res.status(401).json({ message: 'not logged in' })
-    }
-
-    // token is the username, find user by username
-    const user = findUserByUsername(token)
-
-    // bad token, don't allow to proceed to secured resource
-    if (!user) {
-        return res.status(401).json({ message: 'invalid token, login again'})   
-    }
-
-    // user successfully validate, now i can proceed
-    next()
-}
 
 // auth routers will process json requests and send json responses
 route.use(express.json())
 
-route.post('/login', ( req, res) => {
+route.post('/login', catchErrorAsync(async ( req, res) => {
     // if user already logged in then redirect to welcome page
     if (req.session.token) {
         return res.redirect('/welcome')
@@ -63,29 +25,25 @@ route.post('/login', ( req, res) => {
 
     const { username, password } = body
 
-    try {
-        const user = authenticateUserCredentials({ username, password })
+    const user = await authenticateUserCredentials({ username, password })
 
-        // add token in session
-        req.session.token = user.username
+    // add token in session
+    req.session.token = user.username
 
-        // redirect to welcome page
-        res.status(200).json({ message: 'successfully logged in'})
-    }
-    catch(err) {
-        return res.status(401).json({ message: err.message})
-    }
-})
+    // redirect to welcome page
+    res.status(200).json({ message: 'successfully logged in'})
+    
+}))
 
-route.get('/welcome', validateUser, (req, res) => {
+route.get('/welcome', validateUser, catchErrorAsync(async (req, res) => {
     // i am here means user logged in and validated successfully
     const { token: username } = req.session
 
     // if logged in say welcome < username >
     res.status(200).json({ message: `Welcome ${username}`})
-})
+}))
 
-route.get('/logout', (req, res) => {
+route.get('/logout', catchErrorAsync(async (req, res) => {
     const { token } = req.session
 
     // if token not exists then user is not logged in
@@ -102,6 +60,57 @@ route.get('/logout', (req, res) => {
 
         res.status(200).json({ message: 'user logged out successfully'})
     })
-})
+}))
+
+route.post('/register',  catchErrorAsync(async (req, res) => {
+    const { body, session } = req
+
+    // if user is loggedin and trying to register then it's a  bad request
+    if (session.token) {
+        throw new AppError(400, 'you are already loggedin; logout before register')
+    }
+
+    const { username, password, confPassword } = body || {}
+
+    // validate the user input 
+
+    const validationErrorMessages = []
+    let valid = true
+
+    if (!username) {
+        valid = false
+        validationErrorMessages.push('username not provided')
+    }
+    if (!password) {
+        valid = false
+        validationErrorMessages.push('password not provided')
+    }
+    if (!confPassword) {
+        valid = false
+        validationErrorMessages.push('confirm password not provided')
+    }
+    if (password && confPassword && password !== confPassword) {
+        valid = false
+        validationErrorMessages.push('password does not match confirm password')
+    }
+
+    // if all inputs are not valid then send bad request
+    if (!valid) {
+        const message = validationErrorMessages.join('\n')
+        throw new AppError(400,message)
+    }
+
+    // check if any user already exists with the same username, if exists then user can not register
+    const existingUser = findUserByUsername(username)
+    if (existingUser) {
+        throw new AppError(422, `another user already existis with username ${username}`)
+    }
+
+    // all inputs are validated, save the user and set the token to current session
+    const newUser = addNewUser({ username, password })
+    session.token = newUser.username
+
+    res.status(200).json({ message: 'user registered' })
+}))
 
 module.exports = { authRoutes: route }
