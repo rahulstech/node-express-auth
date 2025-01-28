@@ -1,0 +1,48 @@
+{
+    "roles": {
+        "admin": 0, 
+        "user": 5
+    },
+
+    "resources": [
+        "users"
+    ],
+
+    "permissions": {
+        "user": {
+            "can_read": {
+                "users": ["self"]
+            },
+            
+            "can_create": {
+                "users": ["self"]
+            },
+
+            "can_update": {
+                "users": ["self"]
+            },
+
+            "can_delete": {
+                "users": ["none"]
+            }
+        },
+
+        "admin": {
+            "can_read": {
+                "users": ["all"]
+            },
+
+            "can_create": {
+                "users": ["all"]
+            },
+
+            "can_update": {
+                "users": ["all"]
+            },
+
+            "can_delete": {
+                "users": ["self", "low"]
+            }
+        }
+    }
+}

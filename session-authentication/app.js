@@ -2,6 +2,7 @@ const express = require('express')
 const session = require('express-session')
 const { authRoutes } = require('./routes/auth')
 const { profileRoutes } = require('./routes/profile')
+const { adminRoutes } = require('./routes/admin')
 const { connectDatabase, closeDatabase } = require('./database/db')
 const { AppError } = require('./utils/errors')
 
@@ -32,21 +33,17 @@ server.use(authRoutes)
 
 server.use(profileRoutes)
 
+server.use(adminRoutes)
+
 // Add Error Handler
 
 server.use((err, req, res, next) => {
-    let operational = false
     if (err instanceof AppError) {
         res.status(err.statusCode).json({ message: err.message })
-        operational = err.operational
     }
     else {
         console.log(err)
         res.status(500).json({ message: 'internal server error'})
-    }
-
-    if (!operational) {
-        process.exit(1)
     }
 })
 

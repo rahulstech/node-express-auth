@@ -36,7 +36,7 @@ async function checkPassword( user, testPassword ) {
     return false
 }
 
-const authenticateUserCredentials = async ({ username, password }) => {
+const authenticateUserCredentials = async ({ username, password }, role = 'user') => {
 
     // find user by username
     const user = findUserByUsername(username)
@@ -46,8 +46,13 @@ const authenticateUserCredentials = async ({ username, password }) => {
         throw new AppError(401, 'username not found')
     }
 
+    // check that user role is same as required role
+    if (user.role !== role) {
+        throw new AppError(401, `only users with role '${role}' are allowed`)
+    }
+
     // if found next check password, if does not match then throw
-    if (!await checkPassword(user, password)) {
+    if (!(await checkPassword(user, password))) {
         throw new AppError(401, 'incorrect password')
     }
 
@@ -74,5 +79,5 @@ const validateUser = async (req, res, next) => {
 }
 
 module.exports = { 
-    authenticateUserCredentials, validateUser, addSessionTokenForUser, getSessionToken, checkPassword
+    authenticateUserCredentials, validateUser, addSessionTokenForUser, getSessionToken, checkPassword,
 }

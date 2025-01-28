@@ -20,7 +20,9 @@ class AppError extends Error {
 function catchErrorAsync(fn) {
     return ( req, res, next) => {
         fn(req, res, next)
-        .catch(err => next(err))
+        .catch(err => {
+            next(err)
+        })
     }
 }
 

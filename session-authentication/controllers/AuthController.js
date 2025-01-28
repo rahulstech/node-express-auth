@@ -1,25 +1,22 @@
 const { findUserByUsername, addNewUser } = require('../database/db')
 const { AppError } = require('../utils/errors')
-const { authenticateUserCredentials, addSessionTokenForUser, getSessionToken, removeSessionToken } = require('../services/AuthService')
+const { authenticateUserCredentials, addSessionTokenForUser, getSessionToken } = require('../services/AuthService')
+const { canCreate } = require('../services/AuthorizationService')
 
+////////////////////////////////////////////
+///                 Log In              ///
+//////////////////////////////////////////
 
-async function login( req, res ) {
-    // check user logged in
-    if (req.session.token) {
-        return res.json({ message: 'you are already logged in'})
-    }
-
+async function handleLogin( req, res, role = 'user') {
     // if not logged in then check credentials
     const body = req.body
 
     // user send no credentials, bad request
     if (!body) {
-        return res.status(400).json({ message: 'username and password required' })
+        throw new AppError(400, 'username and password required')
     }
 
-    const { username, password } = body
-
-    const user = await authenticateUserCredentials({ username, password })
+    const user = await authenticateUserCredentials(body, role)
 
     // add token in session
     addSessionTokenForUser(req.session, user)
@@ -28,16 +25,22 @@ async function login( req, res ) {
     res.status(200).json({ message: 'successfully logged in'})
 }
 
-async function register( req, res) {
-    const { body, session } = req
+async function login( req, res ) {
+    await handleLogin(req,res)
+}
 
-    // if user is loggedin and trying to register then it's a  bad request
-    const token = getSessionToken()
-    if (token) {
-        throw new AppError(400, 'you are already loggedin; logout before register')
-    }
+async function adminLogin( req, res ) {
+    await handleLogin(req, res, 'admin')
+}
 
-    const { username, password, confPassword } = body || {}
+////////////////////////////////////////////
+///             Registration            ///
+//////////////////////////////////////////
+
+async function handleRegistration( req, res, myRole, targetRole) {
+    const { body } = req
+
+    const { username, password, confPassword, role } = body || {}
 
     // validate the user input 
 
@@ -67,6 +70,13 @@ async function register( req, res) {
         throw new AppError(400,message)
     }
 
+    const userRole = role || targetRole
+
+    // authorize
+    if (!canCreate(myRole, 'users', userRole)) {
+        throw new AppError(401, `can not create user do you previlege constraint`)
+    }
+
     // check if any user already exists with the same username, if exists then user can not register
     const existingUser = findUserByUsername(username)
     if (existingUser) {
@@ -74,13 +84,45 @@ async function register( req, res) {
     }
 
     // all inputs are validated, save the user
-    const newUser = addNewUser({ username, password })
+    return addNewUser({ username, password, role: userRole })
+}
 
-    // save the user token in session
+async function register(req, res) {
+
+    const { session, user } = req
+
+    // if user is logged, then registration is not allowed
+    if (user) {
+        throw new AppError(400, 'user already logged in; can not register')
+    }
+
+    // now perform registration
+    const newUser = await handleRegistration(req, res, 'user', 'user')
+
+    // add session token for user
     addSessionTokenForUser(session, newUser)
 
     res.status(200).json({ message: 'user registered' })
 }
+
+async function registerAdmin(req, res) {
+
+    const { session, user } = req
+
+    // admin can register himself or register new admin or user if logged in
+    const newUser = await handleRegistration(req, res, 'admin', 'user')
+
+    // currently not loggedin, so add the session token
+    if (!user) {
+        addSessionTokenForUser(session, newUser)
+    }
+
+    res.status(200).json({ message: 'user registered' })
+}
+
+////////////////////////////////////////////
+///             Log Out                 ///
+//////////////////////////////////////////
 
 async function logout( req, res, next) {
 
@@ -94,4 +136,4 @@ async function logout( req, res, next) {
     })
 }
 
-module.exports = { login, register, logout }
+module.exports = { login, adminLogin, register, registerAdmin, logout }

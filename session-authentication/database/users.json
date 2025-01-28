@@ -1,26 +1,53 @@
 {
-  "axon1": {
-    "username": "axon1",
-    "password": "pass123"
-  },
-  "bxon2": {
-    "username": "bxon2",
-    "password": "pass125"
-  },
-  "rexon5": {
-    "username": "rexon5",
-    "password": "pass547"
-  },
-  "rohan004": {
-    "username": "rohan004",
-    "password": "balaji66"
-  },
-  "rohan007": {
-    "username": "rohan007",
-    "password": "balaji66"
-  },
-  "rohan0007": {
-    "username": "rohan0007",
-    "password": "balaji99"
+  "sequence": 8,
+  "users": {
+    "axon1": {
+      "id": 1,
+      "username": "axon1",
+      "password": "pass123",
+      "role": "user"
+    },
+    "bxon2": {
+      "id": 2,
+      "username": "bxon2",
+      "password": "pass125",
+      "role": "user"
+    },
+    "rexon5": {
+      "id": 3,
+      "username": "rexon5",
+      "password": "pass547",
+      "role": "user"
+    },
+    "rohan004": {
+      "id": 4,
+      "username": "rohan004",
+      "password": "balaji66",
+      "role": "admin"
+    },
+    "rohan0007": {
+      "id": 6,
+      "username": "rohan0007",
+      "password": "balaji99",
+      "role": "admin"
+    },
+    "rocky08": {
+      "id": 7,
+      "username": "rocky08",
+      "password": "iamrocky01",
+      "role": "admin"
+    },
+    "rohan008": {
+      "id": 5,
+      "username": "rohan008",
+      "password": "balaji66",
+      "role": "user"
+    },
+    "marco09": {
+      "id": 8,
+      "username": "marco09",
+      "password": "thisismarco",
+      "role": "user"
+    }
   }
 }
